@@ -220,6 +220,26 @@ def apply_boolean(obj_active, x, bool_op, delete_original=False):
         bpy.ops.object.delete()
 
 
+# Corrects the normal orientation of 2D Sectors before boolean
+# If needed and returns if the sector had flipped normals.
+def pre_boolean(x):
+    o = bpy.data.objects[x]
+    if not o.modifiers:
+        return False
+    if not o.modifiers[0].type == "SOLIDIFY":
+        return False
+    if not o.modifiers[0].use_flip_normals:
+        return False
+
+    o.modifiers[0].use_flip_normals = False
+    return True
+
+# Restore the normalsector orientation od 2D Sectors after boolean
+# if pre_boolean() flipped them.
+def post_boolean(x, unflip):
+    bpy.data.objects[x].modifiers["Solidify"].use_flip_normals = unflip
+
+
 def flip_object_normals(ob):
     bpy.ops.object.select_all(action='DESELECT')
     ob.select = True
@@ -532,6 +552,7 @@ class LevelNewSector(bpy.types.Operator):
         bpy.context.object.modifiers["Solidify"].offset = 1
         bpy.context.object.modifiers["Solidify"].use_even_offset = True
         bpy.context.object.modifiers["Solidify"].use_quality_normals = True
+        bpy.context.object.modifiers["Solidify"].use_flip_normals = True
         ob = bpy.context.active_object
         ob.name = "sector"
         ob.data.name = "sector"
@@ -723,11 +744,17 @@ class LevelBuddyBuildMap(bpy.types.Operator):
                         update_location_precision(ob)
             # sector A
             for x in sector_list:
+
+                flipped = pre_boolean(x)
+
                 if x != sector_list[0]:
                     apply_boolean(level_map, x, 'UNION')
                 else:
                     level_map.data = bpy.data.objects[x].to_mesh(bpy.context.scene, True, "PREVIEW")
                     scn.objects.active = level_map
+
+                post_boolean(x,flipped)
+
             # sector B
             for x in sector_list_b:
                 apply_boolean(level_map, x, 'UNION')
