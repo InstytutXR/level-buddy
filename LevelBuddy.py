@@ -143,9 +143,9 @@ def update_sector_plane_modifier(ob):
 
 def update_sector_plane_materials(ob):
     if bpy.data.materials.find(ob.ceiling_texture) != -1:
-        ob.material_slots[0].material = bpy.data.materials[ob.ceiling_texture]
+        ob.material_slots[0].material = bpy.data.materials[ob.floor_texture]
     if bpy.data.materials.find(ob.floor_texture) != -1:
-        ob.material_slots[1].material = bpy.data.materials[ob.floor_texture]
+        ob.material_slots[1].material = bpy.data.materials[ob.ceiling_texture]
     if bpy.data.materials.find(ob.wall_texture) != -1:
         ob.material_slots[2].material = bpy.data.materials[ob.wall_texture]
 
