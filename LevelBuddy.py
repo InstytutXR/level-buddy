@@ -1,28 +1,8 @@
-#  ***** BEGIN GPL LICENSE BLOCK *****
+# Level Buddy
+# Created by Matt Lucas - https://matt-lucas.itch.io/level-buddy
+# Licensed under GPL 3.0
 #
-#  This program is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#  ***** END GPL LICENSE BLOCK *****
-#
-#
-#  ***** TODO *****
-#
-#   - clean up code
-#   - clean up panel UI
-#
-#  ***** END TODO *****
-
+# SPDX-License-Identifier: GPL-3.0-only
 
 bl_info = {
     "name": "Level Buddy",
@@ -203,6 +183,7 @@ def cleanup_vertex_precision(ob):
 def apply_boolean(obj_active, x, bool_op, delete_original=False):
     bpy.ops.object.select_all(action='DESELECT')
     obj_active.select = True
+
     me = bpy.data.objects[x].to_mesh(bpy.context.scene, True, "PREVIEW")
     ob_bool = bpy.data.objects.new("_booley", me)
     copy_transforms(ob_bool, bpy.data.objects[x])
@@ -552,7 +533,9 @@ class LevelNewSector(bpy.types.Operator):
         bpy.context.object.modifiers["Solidify"].offset = 1
         bpy.context.object.modifiers["Solidify"].use_even_offset = True
         bpy.context.object.modifiers["Solidify"].use_quality_normals = True
+        #hack
         bpy.context.object.modifiers["Solidify"].use_flip_normals = True
+        #hack
         ob = bpy.context.active_object
         ob.name = "sector"
         ob.data.name = "sector"
