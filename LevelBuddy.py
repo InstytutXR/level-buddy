@@ -2,6 +2,9 @@
 # Created by Matt Lucas - https://matt-lucas.itch.io/level-buddy
 # Licensed under GPL 3.0
 #
+# Modified by Kyrah Abattoir - https://github.com/kyrahabattoir/level-buddy
+# Modifications under GPL 3.0 only
+#
 # SPDX-License-Identifier: GPL-3.0-only
 
 bl_info = {
