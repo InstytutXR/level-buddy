@@ -183,11 +183,15 @@ def cleanup_vertex_precision(ob):
             v.co.z = round(v.co.z, p)
 
 
-def apply_boolean(obj_active, x, bool_op, delete_original=False):
+def apply_boolean(obj_active, x, bool_op, flip=False, delete_original=False):
     bpy.ops.object.select_all(action='DESELECT')
     obj_active.select = True
 
     me = bpy.data.objects[x].to_mesh(bpy.context.scene, True, "PREVIEW")
+
+    if flip:
+        me.flip_normals()
+
     ob_bool = bpy.data.objects.new("_booley", me)
     copy_transforms(ob_bool, bpy.data.objects[x])
     cleanup_vertex_precision(ob_bool)
@@ -202,28 +206,6 @@ def apply_boolean(obj_active, x, bool_op, delete_original=False):
         bpy.ops.object.select_all(action='DESELECT')
         bpy.ops.object.select_pattern(pattern=x)
         bpy.ops.object.delete()
-
-
-# Corrects the normal orientation of 2D Sectors before boolean
-# If needed and returns if the sector had flipped normals.
-def pre_boolean(x):
-    o = bpy.data.objects[x]
-    if not o.modifiers:
-        return False
-    if not o.modifiers[0].type == "SOLIDIFY":
-        return False
-    if not o.modifiers[0].use_flip_normals:
-        return False
-
-    o.modifiers[0].use_flip_normals = False
-    return True
-
-# Restore the normalsector orientation od 2D Sectors after boolean
-# if pre_boolean() flipped them.
-def post_boolean(x, unflip):
-    if unflip:
-        bpy.data.objects[x].modifiers["Solidify"].use_flip_normals = True
-
 
 def flip_object_normals(ob):
     bpy.ops.object.select_all(action='DESELECT')
@@ -537,6 +519,7 @@ class LevelNewSector(bpy.types.Operator):
         bpy.context.object.modifiers["Solidify"].offset = 1
         bpy.context.object.modifiers["Solidify"].use_even_offset = True
         bpy.context.object.modifiers["Solidify"].use_quality_normals = True
+        # Flip 2D sector normals.
         bpy.context.object.modifiers["Solidify"].use_flip_normals = True
 
         ob = bpy.context.active_object
@@ -602,6 +585,11 @@ class LevelNewBrush(bpy.types.Operator):
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.object.texture_buddy_uv()
+
+        # If it's a 3D sector, flip normals.
+        if self.s_type == "MESH":
+            bpy.ops.mesh.flip_normals()
+
         bpy.ops.object.editmode_toggle()
         bpy.context.object.game.physics_type = 'NO_COLLISION'
         bpy.context.object.hide_render = True
@@ -731,19 +719,17 @@ class LevelBuddyBuildMap(bpy.types.Operator):
             # sector A
             for x in sector_list:
 
-                flipped = pre_boolean(x)
-
                 if x != sector_list[0]:
-                    apply_boolean(level_map, x, 'UNION')
+                    apply_boolean(level_map, x, 'UNION', True)
                 else:
                     level_map.data = bpy.data.objects[x].to_mesh(bpy.context.scene, True, "PREVIEW")
-                    scn.objects.active = level_map
+                    level_map.data.flip_normals()
 
-                post_boolean(x,flipped)
+                    scn.objects.active = level_map
 
             # sector B
             for x in sector_list_b:
-                apply_boolean(level_map, x, 'UNION')
+                apply_boolean(level_map, x, 'UNION', True)
             # flip normals of sectors
             if len(sector_list) > 0 or len(sector_list_b) > 0:
                 flip_object_normals(level_map)
