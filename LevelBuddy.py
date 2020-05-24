@@ -536,9 +536,8 @@ class LevelNewSector(bpy.types.Operator):
         bpy.context.object.modifiers["Solidify"].offset = 1
         bpy.context.object.modifiers["Solidify"].use_even_offset = True
         bpy.context.object.modifiers["Solidify"].use_quality_normals = True
-        #hack
         bpy.context.object.modifiers["Solidify"].use_flip_normals = True
-        #hack
+
         ob = bpy.context.active_object
         ob.name = "sector"
         ob.data.name = "sector"
