@@ -221,7 +221,8 @@ def pre_boolean(x):
 # Restore the normalsector orientation od 2D Sectors after boolean
 # if pre_boolean() flipped them.
 def post_boolean(x, unflip):
-    bpy.data.objects[x].modifiers["Solidify"].use_flip_normals = unflip
+    if unflip:
+        bpy.data.objects[x].modifiers["Solidify"].use_flip_normals = True
 
 
 def flip_object_normals(ob):
