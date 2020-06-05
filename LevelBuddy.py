@@ -356,7 +356,8 @@ bpy.types.Object.sector_light_max = bpy.props.FloatProperty(
 bpy.types.Object.sector_group = bpy.props.EnumProperty(
     items=[
         ("A", "A", "the first group to combine"),
-        ("B", "B", "the second group to combine")
+        ("B", "B", "the second group to combine"),
+        ("Detail", "Detail", "detail brushes are combined separately")
     ],
     name="Group",
     description="the combining group this object belongs to.  A is combined before B",
@@ -688,13 +689,16 @@ class LevelBuddyBuildMap(bpy.types.Operator):
         if self.bool_op == 'EXPORT':
             export_level_map()
         else:
+            map_name = scn.map_name
+            detail_name = scn.map_name+"_detail"
             sector_list = []
             sector_list_b = []
             brush_list = []
             brush_list_b = []
+            brush_list_detail = []
             subtract_list = []
             subtract_list_b = []
-            level_map = create_new_boolean_object(scn, scn.map_name)
+            level_map = create_new_boolean_object(scn, map_name)
             visible_objects = bpy.context.visible_objects
             for ob in visible_objects:
                 if ob.no_combine is False and ob.type == 'MESH' and ob.sector_type != 'NONE' and ob != level_map:
@@ -707,8 +711,10 @@ class LevelBuddyBuildMap(bpy.types.Operator):
                     if ob.sector_type == 'BRUSH':
                         if ob.sector_group == 'A':
                             brush_list.append(ob.name)
-                        else:
+                        elif ob.sector_group == 'B':
                             brush_list_b.append(ob.name)
+                        else:
+                            brush_list_detail.append(ob.name)
                         update_location_precision(ob)
                     if ob.sector_type == 'SUBTRACT':
                         if ob.sector_group == 'A':
@@ -716,6 +722,7 @@ class LevelBuddyBuildMap(bpy.types.Operator):
                         else:
                             subtract_list_b.append(ob.name)
                         update_location_precision(ob)
+
             # sector A
             for x in sector_list:
 
@@ -749,6 +756,16 @@ class LevelBuddyBuildMap(bpy.types.Operator):
             for x in subtract_list_b:
                 apply_boolean(level_map, x, 'DIFFERENCE')
                 update_location_precision(level_map)
+
+            # build detail mesh
+            detail_map = create_new_boolean_object(scn, detail_name)
+            for x in brush_list_detail:
+                apply_boolean(detail_map,x,'UNION')
+                update_location_precision(detail_map)
+
+            # merge everything
+            # TBD
+
             # print("...texture unwrap")
             if scn.map_auto_uv:
                 auto_texture(level_map)
