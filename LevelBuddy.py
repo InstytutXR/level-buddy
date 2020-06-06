@@ -758,18 +758,19 @@ class LevelBuddyBuildMap(bpy.types.Operator):
                 update_location_precision(level_map)
 
             # build detail mesh
-            detail_map = create_new_boolean_object(scn, detail_name)
-            for x in brush_list_detail:
-                apply_boolean(detail_map,x,'UNION')
-                update_location_precision(detail_map)
+            if len(brush_list_detail) > 0:
+                detail_map = create_new_boolean_object(scn, detail_name)
+                for x in brush_list_detail:
+                    apply_boolean(detail_map,x,'UNION')
+                    update_location_precision(detail_map)
 
-            # merge everything
-            bpy.ops.object.select_all(action='DESELECT')
-            level_map.hide_select = False
-            detail_map.select = True
-            level_map.select = True
-            bpy.context.scene.objects.active = level_map
-            bpy.ops.object.join()
+                # merge everything
+                bpy.ops.object.select_all(action='DESELECT')
+                level_map.hide_select = False
+                detail_map.select = True
+                level_map.select = True
+                bpy.context.scene.objects.active = level_map
+                bpy.ops.object.join()
 
             # print("...texture unwrap")
             if scn.map_auto_uv:
