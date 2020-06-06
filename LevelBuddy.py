@@ -764,7 +764,12 @@ class LevelBuddyBuildMap(bpy.types.Operator):
                 update_location_precision(detail_map)
 
             # merge everything
-            # TBD
+            bpy.ops.object.select_all(action='DESELECT')
+            level_map.hide_select = False
+            detail_map.select = True
+            level_map.select = True
+            bpy.context.scene.objects.active = level_map
+            bpy.ops.object.join()
 
             # print("...texture unwrap")
             if scn.map_auto_uv:
