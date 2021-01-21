@@ -1,28 +1,11 @@
-#  ***** BEGIN GPL LICENSE BLOCK *****
+# Level Buddy
+# Created by Matt Lucas - https://matt-lucas.itch.io/level-buddy
+# Licensed under GPL 3.0
 #
-#  This program is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
+# Modified by Kyrah Abattoir - https://github.com/kyrahabattoir/level-buddy
+# Modifications under GPL 3.0 only
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#  ***** END GPL LICENSE BLOCK *****
-#
-#
-#  ***** TODO *****
-#
-#   - clean up code
-#   - clean up panel UI
-#
-#  ***** END TODO *****
-
+# SPDX-License-Identifier: GPL-3.0-only
 
 bl_info = {
     "name": "Level Buddy",
@@ -160,9 +143,9 @@ def update_sector_plane_modifier(ob):
 
 def update_sector_plane_materials(ob):
     if bpy.data.materials.find(ob.ceiling_texture) != -1:
-        ob.material_slots[0].material = bpy.data.materials[ob.ceiling_texture]
+        ob.material_slots[0].material = bpy.data.materials[ob.floor_texture]
     if bpy.data.materials.find(ob.floor_texture) != -1:
-        ob.material_slots[1].material = bpy.data.materials[ob.floor_texture]
+        ob.material_slots[1].material = bpy.data.materials[ob.ceiling_texture]
     if bpy.data.materials.find(ob.wall_texture) != -1:
         ob.material_slots[2].material = bpy.data.materials[ob.wall_texture]
 
@@ -200,10 +183,15 @@ def cleanup_vertex_precision(ob):
             v.co.z = round(v.co.z, p)
 
 
-def apply_boolean(obj_active, x, bool_op, delete_original=False):
+def apply_boolean(obj_active, x, bool_op, flip=False, delete_original=False):
     bpy.ops.object.select_all(action='DESELECT')
     obj_active.select = True
+
     me = bpy.data.objects[x].to_mesh(bpy.context.scene, True, "PREVIEW")
+
+    if flip:
+        me.flip_normals()
+
     ob_bool = bpy.data.objects.new("_booley", me)
     copy_transforms(ob_bool, bpy.data.objects[x])
     cleanup_vertex_precision(ob_bool)
@@ -218,7 +206,6 @@ def apply_boolean(obj_active, x, bool_op, delete_original=False):
         bpy.ops.object.select_all(action='DESELECT')
         bpy.ops.object.select_pattern(pattern=x)
         bpy.ops.object.delete()
-
 
 def flip_object_normals(ob):
     bpy.ops.object.select_all(action='DESELECT')
@@ -369,7 +356,8 @@ bpy.types.Object.sector_light_max = bpy.props.FloatProperty(
 bpy.types.Object.sector_group = bpy.props.EnumProperty(
     items=[
         ("A", "A", "the first group to combine"),
-        ("B", "B", "the second group to combine")
+        ("B", "B", "the second group to combine"),
+        ("Detail", "Detail", "detail brushes are combined separately")
     ],
     name="Group",
     description="the combining group this object belongs to.  A is combined before B",
@@ -532,6 +520,9 @@ class LevelNewSector(bpy.types.Operator):
         bpy.context.object.modifiers["Solidify"].offset = 1
         bpy.context.object.modifiers["Solidify"].use_even_offset = True
         bpy.context.object.modifiers["Solidify"].use_quality_normals = True
+        # Flip 2D sector normals.
+        bpy.context.object.modifiers["Solidify"].use_flip_normals = True
+
         ob = bpy.context.active_object
         ob.name = "sector"
         ob.data.name = "sector"
@@ -595,6 +586,11 @@ class LevelNewBrush(bpy.types.Operator):
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.object.texture_buddy_uv()
+
+        # If it's a 3D sector, flip normals.
+        if self.s_type == "MESH":
+            bpy.ops.mesh.flip_normals()
+
         bpy.ops.object.editmode_toggle()
         bpy.context.object.game.physics_type = 'NO_COLLISION'
         bpy.context.object.hide_render = True
@@ -693,13 +689,16 @@ class LevelBuddyBuildMap(bpy.types.Operator):
         if self.bool_op == 'EXPORT':
             export_level_map()
         else:
+            map_name = scn.map_name
+            detail_name = scn.map_name+"_detail"
             sector_list = []
             sector_list_b = []
             brush_list = []
             brush_list_b = []
+            brush_list_detail = []
             subtract_list = []
             subtract_list_b = []
-            level_map = create_new_boolean_object(scn, scn.map_name)
+            level_map = create_new_boolean_object(scn, map_name)
             visible_objects = bpy.context.visible_objects
             for ob in visible_objects:
                 if ob.no_combine is False and ob.type == 'MESH' and ob.sector_type != 'NONE' and ob != level_map:
@@ -712,8 +711,10 @@ class LevelBuddyBuildMap(bpy.types.Operator):
                     if ob.sector_type == 'BRUSH':
                         if ob.sector_group == 'A':
                             brush_list.append(ob.name)
-                        else:
+                        elif ob.sector_group == 'B':
                             brush_list_b.append(ob.name)
+                        else:
+                            brush_list_detail.append(ob.name)
                         update_location_precision(ob)
                     if ob.sector_type == 'SUBTRACT':
                         if ob.sector_group == 'A':
@@ -721,16 +722,21 @@ class LevelBuddyBuildMap(bpy.types.Operator):
                         else:
                             subtract_list_b.append(ob.name)
                         update_location_precision(ob)
+
             # sector A
             for x in sector_list:
+
                 if x != sector_list[0]:
-                    apply_boolean(level_map, x, 'UNION')
+                    apply_boolean(level_map, x, 'UNION', True)
                 else:
                     level_map.data = bpy.data.objects[x].to_mesh(bpy.context.scene, True, "PREVIEW")
+                    level_map.data.flip_normals()
+
                     scn.objects.active = level_map
+
             # sector B
             for x in sector_list_b:
-                apply_boolean(level_map, x, 'UNION')
+                apply_boolean(level_map, x, 'UNION', True)
             # flip normals of sectors
             if len(sector_list) > 0 or len(sector_list_b) > 0:
                 flip_object_normals(level_map)
@@ -750,6 +756,22 @@ class LevelBuddyBuildMap(bpy.types.Operator):
             for x in subtract_list_b:
                 apply_boolean(level_map, x, 'DIFFERENCE')
                 update_location_precision(level_map)
+
+            # build detail mesh
+            if len(brush_list_detail) > 0:
+                detail_map = create_new_boolean_object(scn, detail_name)
+                for x in brush_list_detail:
+                    apply_boolean(detail_map,x,'UNION')
+                    update_location_precision(detail_map)
+
+                # merge everything
+                bpy.ops.object.select_all(action='DESELECT')
+                level_map.hide_select = False
+                detail_map.select = True
+                level_map.select = True
+                bpy.context.scene.objects.active = level_map
+                bpy.ops.object.join()
+
             # print("...texture unwrap")
             if scn.map_auto_uv:
                 auto_texture(level_map)
